@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Lash Lab — IA2 (2305806)</title>
+  <style>
+    :root{
+      --brand:#6b2d5c; /* deep mauve */
+      --accent:#f7c6d9; /* soft pink */
+      --bg:#fff8fb;
+      --muted:#666;
+      --max-width:1100px;
+      --card-radius:12px;
+      --font-sans: 'Segoe UI', Roboto, Arial, sans-serif;
+      --tax-rate:0.15; /* 15% tax used for calculation */
+    }
+    *{box-sizing:border-box}
+    body{font-family:var(--font-sans);background:var(--bg);color:#222;margin:0;padding:0;line-height:1.4}
+    header{background:linear-gradient(90deg,var(--brand),#8a3a69);color:white;padding:16px 12px}
+    .wrap{max-width:var(--max-width);margin:0 auto;padding:12px}
+    .nav{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand img{width:48px;height:48px;border-radius:8px}
+    nav a{color:white;text-decoration:none;padding:8px;border-radius:8px}
+    nav a:hover{background:rgba(255,255,255,0.06)}
+    .actions{display:flex;gap:8px;align-items:center}
+    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+    button.primary{background:var(--brand);color:white}
+
+    /* Layout: grid for desktop, stacked for mobile */
+    main{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:18px}
+    aside.card, .content.card{background:white;border-radius:var(--card-radius);padding:12px;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+
+    /* Product list */
+    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+    .product{border:1px solid #f1dce6;padding:8px;border-radius:10px;display:flex;flex-direction:column}
+    .product img{width:100%;height:140px;object-fit:cover;border-radius:8px}
+    .product h4{margin:8px 0 4px}
+    .price{font-weight:600;color:var(--brand)}
+
+    /* Cart list */
+    .cart-list{display:flex;flex-direction:column;gap:8px}
+    .cart-item{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px;border:1px dashed #f0d8e8}
+    .cart-item img{width:60px;height:60px;object-fit:cover;border-radius:6px}
+    .qty{width:48px}
+
+    /* Footer */
+    footer{margin-top:18px;padding:18px;text-align:center;color:var(--muted)}
+
+    /* Responsive rules */
+    @media (max-width:950px){main{grid-template-columns:1fr}}
+    @media (max-width:600px){
+      header .wrap{padding:8px}
+      .brand img{width:40px;height:40px}
+      .product img{height:120px}
+    }
+
+    /* Simple modal styles for login/checkout */
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);padding:18px;z-index:100;}
+    .modal .panel{background:white;padding:16px;border-radius:10px;max-width:480px;width:100%}
+    .hidden{display:none}
+
+    /* small helpers */
+    .muted{color:var(--muted)}
+    input,select,textarea{padding:8px;border-radius:8px;border:1px solid #e7cfe0;width:100%}
+    label{font-size:0.9rem}
+    .row{display:flex;gap:8px}
+    .right{text-align:right}
+    .small{font-size:0.85rem}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="brand">
+        <img src="Logo.jpg" alt="Lash Lab logo">
+        <div>
+          <div style="font-weight:700;font-size:1.1rem">The Lash Lab</div>
+          <div class="small">DIY lash products • clean, cruelty-free</div>
+        </div>
+      </div>
+      <nav>
+        <a href="#home" data-link>Home</a>
+        <a href="#products" data-link>Products</a>
+        <a href="#about" data-link>About</a>
+        <a href="#cart" data-link>Cart (<span id="cart-count">0</span>)</a>
+      </nav>
+      <div class="actions">
+        <button id="btn-login">Login</button>
+        <button id="btn-register">Register</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- SIDEBAR: Filters & Cart summary -->
+    <aside class="card" aria-label="sidebar">
+      <h3>Quick Cart</h3>
+      <div id="mini-cart" class="cart-list small">
+        <div class="muted">Your cart is empty</div>
+      </div>
+      <hr>
+      <div>
+        <div class="small muted">Subtotal</div>
+        <div id="mini-subtotal" style="font-weight:700">$0.00</div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="btn-view-cart" class="primary">View Cart</button>
+        <button id="btn-clear-cart">Clear</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT: Home / Products / About / Cart / Checkout sections -->
+    <section class="content card" id="content">
+      <!-- HOME -->
+      <section id="home-section">
+        <h2>Welcome to The Lash Lab</h2>
+        <p>Shop clean, easy-to-use eyelash products so you can DIY like a pro. Scroll down to see products.</p>
+      </section>
+
+      <!-- PRODUCTS -->
+      <section id="products-section" class="hidden">
+        <h3>Products</h3>
+        <div class="products" id="products"></div>
+      </section>
+
+      <!-- ABOUT -->
+      <section id="about-section" class="hidden muted">
+        <h3>About Us</h3>
+        <p><strong>Full name:</strong> Chevelle Allen</p>
+        <p><strong>ID#:</strong> 2305806</p>
+        <p><strong>Email:</strong> <a href="chevellejallen@students.utech.edu.jm">chevellejallen@students.utech.edu.jm</a></p>
+        <p><strong>Module/Assignment:</strong> Web Programming IA#2</p>
+        <p><strong>Class:</strong> Thursday 6pm</p>
+        <p>The Lash Lab is a modern beauty brand specializing in DIY eyelash products designed for women who want affordable, high-quality, and cruelty-free lash care from the comfort of their own home. The business provides a wide range of items including lash extension kits, tweezers, applicators and lash removers.
+
+The brand focuses on empowering customers by offering products that are easy to use, safe for sensitive eyes, and suitable for beginners as well as experienced lash enthusiasts.
+
+In addition to selling products, The Lash Lab promotes confidence and self-expression by helping women achieve salon-quality results without the high costs or frequent appointments. The company also aims to build a supportive online community by sharing tips, tutorials, and lash care guidance to ensure customers get the best results.
+
+Overall, The Lash Lab blends beauty, convenience, and affordability—making flawless lashes accessible to everyone.</p>
+      </section>
+
+      <!-- CART PAGE -->
+      <section id="cart-section" class="hidden">
+        <h3>Your Cart</h3>
+        <div id="cart-list"></div>
+        <div style="margin-top:12px">
+          <div class="row">
+            <div style="flex:1">
+              <div class="small muted">Discount (if any)</div>
+              <div id="cart-discount">$0.00</div>
+            </div>
+            <div style="width:180px;text-align:right">
+              <div class="small muted">Tax</div>
+              <div id="cart-tax">$0.00</div>
+            </div>
+          </div>
+          <hr>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><strong>Total</strong></div>
+            <div id="cart-total" style="font-size:1.2rem;font-weight:700">$0.00</div>
+          </div>
+          <div style="margin-top:10px;display:flex;gap:8px">
+            <button id="btn-checkout">Check Out</button>
+            <button id="btn-clear-all">Clear All</button>
+            <button id="btn-close-cart">Close</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHECKOUT MODAL (hidden by default) -->
+      <div id="checkout-modal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="panel">
+          <h3>Checkout</h3>
+          <form id="checkout-form">
+            <label for="ship-name">Full name</label>
+            <input id="ship-name" required>
+            <label for="ship-address">Address</label>
+            <textarea id="ship-address" rows="2" required></textarea>
+            <label for="pay-amount">Amount to pay</label>
+            <input id="pay-amount" readonly>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button type="submit" class="primary">Confirm</button>
+              <button type="button" id="btn-cancel-checkout">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- LOGIN / REGISTER MODAL -->
+      <div id="auth-modal" class="modal hidden" aria-hidden="true">
+        <div class="panel">
+          <h3 id="auth-title">Login</h3>
+          <form id="auth-form">
+            <div id="login-fields">
+              <label for="login-username">Username (email)</label>
+              <input id="login-username" type="email" required>
+              <label for="login-password">Password</label>
+              <input id="login-password" type="password" required>
+            </div>
+            <div id="register-fields" class="hidden">
+              <label for="reg-fullname">Full name</label>
+              <input id="reg-fullname">
+              <label for="reg-dob">DOB</label>
+              <input id="reg-dob" type="date">
+              <label for="reg-email">Email</label>
+              <input id="reg-email" type="email">
+              <label for="reg-username">Username</label>
+              <input id="reg-username">
+              <label for="reg-password">Password</label>
+              <input id="reg-password" type="password">
+            </div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button id="auth-submit" class="primary">Submit</button>
+              <button id="auth-toggle" type="button">Switch to Register</button>
+              <button id="auth-close" type="button">Close</button>
+            </div>
+            <div id="auth-msg" class="small muted" style="margin-top:8px"></div>
+          </form>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">© The Lash Lab — IA#2 (2305806).</div>
+  </footer>
+
+  <script>
+    /* ==========================
+       JAVASCRIPT 
+       ========================== */
+
+    const PRODUCTS = [
+      {id:1,name:'Lash Glue (Clear) 4g',price:6.50,src:'Glue.jpg'},
+      {id:2,name:'Lash Remover',price:8.00,src:'Remover.jpg'},
+      {id:3,name:'Standard Set',price:12.00,src:'Standard_Set.jpg'},
+      {id:4,name:'Lash Tweezer',price:9.75,src:'Tweezer.jpg'},
+      {id:5,name:'Volume Set',price:15.00,src:'Volume_Set.jpg'}
+    ];
+
+    // Cart state kept in-memory (for a real site use localStorage or backend)
+    const cart = {};
+
+    /* ---------- Utility functions ---------- */
+    function qs(sel){return document.querySelector(sel)}
+    function qsa(sel){return document.querySelectorAll(sel)}
+    function formatCurrency(v){return '$'+v.toFixed(2)}
+
+    /* ---------- Rendering products ---------- */
+    function renderProducts(){
+      const container = qs('#products');
+      container.innerHTML = '';
+      PRODUCTS.forEach(p=>{
+        const div = document.createElement('div'); div.className='product';
+        div.innerHTML = `
+          <img src="${p.src}" alt="${p.name}">
+          <h4>${p.name}</h4>
+          <div class="price">${formatCurrency(p.price)}</div>
+          <div style="margin-top:auto;display:flex;gap:8px;margin-top:8px">
+            <input type="number" min="1" value="1" id="qty-${p.id}" style="width:72px">
+            <button data-add="${p.id}">Add</button>
+          </div>
+        `;
+        container.appendChild(div);
+      })
+    }
+
+    /* ---------- Cart functions ---------- */
+    function addToCart(productId, qty=1){
+      const prod = PRODUCTS.find(p=>p.id===productId);
+      if(!prod) return;
+      if(cart[productId]) cart[productId].qty += qty; else cart[productId] = {product:prod, qty:qty};
+      updateCartUI();
+    }
+
+    function removeFromCart(productId){
+      delete cart[productId];
+      updateCartUI();
+    }
+
+    function updateQuantity(productId, qty){
+      if(qty<=0) return removeFromCart(productId);
+      if(cart[productId]) cart[productId].qty = qty;
+      updateCartUI();
+    }
+
+    function clearCart(){
+      for(const k in cart) delete cart[k];
+      updateCartUI();
+    }
+
+    function cartTotals(){
+      let subtotal=0;
+      for(const k in cart){ subtotal += cart[k].product.price * cart[k].qty }
+      // discount rule example: $5 off if subtotal over $50
+      const discount = subtotal>50 ? 5 : 0;
+      const tax = (subtotal - discount) * parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--tax-rate'));
+      const total = subtotal - discount + tax;
+      return {subtotal,discount,tax,total};
+    }
+
+    /* ---------- UI update functions ---------- */
+    function updateCartUI(){
+      // mini cart
+      const mini = qs('#mini-cart'); mini.innerHTML='';
+      const keys = Object.keys(cart);
+      if(keys.length===0){ mini.innerHTML='<div class="muted">Your cart is empty</div>'; qs('#cart-count').textContent='0'; qs('#mini-subtotal').textContent=formatCurrency(0); }
+      else{
+        keys.forEach(k=>{
+          const it = cart[k];
+          const el = document.createElement('div'); el.className='cart-item small';
+          el.innerHTML = `<img src="${it.product.src}"><div style="flex:1"><div>${it.product.name}</div><div class="muted small">${formatCurrency(it.product.price)} x ${it.qty}</div></div><div style="text-align:right">${formatCurrency(it.product.price*it.qty)}</div>`;
+          mini.appendChild(el);
+        })
+        const t = cartTotals(); qs('#cart-count').textContent=keys.length; qs('#mini-subtotal').textContent=formatCurrency(t.subtotal);
+      }
+
+      // cart page
+      const cartList = qs('#cart-list'); cartList.innerHTML='';
+      if(keys.length===0){ cartList.innerHTML='<div class="muted">No items in cart</div>'; qs('#cart-section').querySelector('#cart-total').textContent=formatCurrency(0); qs('#cart-discount').textContent=formatCurrency(0); qs('#cart-tax').textContent=formatCurrency(0); }
+      else{
+        keys.forEach(k=>{
+          const it = cart[k];
+          const node = document.createElement('div'); node.className='cart-item';
+          node.innerHTML = `
+            <img src="${it.product.src}" alt="${it.product.name}">
+            <div style="flex:1">
+              <div><strong>${it.product.name}</strong></div>
+              <div class="small muted">${formatCurrency(it.product.price)}</div>
+            </div>
+            <div style="width:120px">
+              <label class="small">Qty</label>
+              <input class="qty" type="number" min="1" value="${it.qty}" data-id="${it.product.id}">
+            </div>
+            <div style="width:100px;text-align:right">${formatCurrency(it.product.price * it.qty)}</div>
+            <div style="width:70px"><button data-remove="${it.product.id}">Remove</button></div>
+          `;
+          cartList.appendChild(node);
+        })
+        const totals = cartTotals(); qs('#cart-discount').textContent=formatCurrency(totals.discount); qs('#cart-tax').textContent=formatCurrency(totals.tax); qs('#cart-total').textContent=formatCurrency(totals.total);
+      }
+    }
+
+    /* ---------- Event binding ---------- */
+    document.addEventListener('click', (e)=>{
+      // add-to-cart buttons — single delegated handler
+      const add = e.target.closest('[data-add]');
+      if(add){
+        const id = parseInt(add.getAttribute('data-add'));
+        const qtyInput = qs('#qty-'+id);
+        const qty = Math.max(1, parseInt(qtyInput.value)||1);
+        addToCart(id,qty);
+      }
+
+      // remove-from-cart
+      const rem = e.target.closest('[data-remove]');
+      if(rem){
+        const id = parseInt(rem.getAttribute('data-remove'));
+        removeFromCart(id);
+      }
+
+      // view cart
+      if(e.target.id==='btn-view-cart' || (e.target.matches('a') && e.target.getAttribute('href')=='#cart')){
+        showSection('cart');
+      }
+
+      // clear cart
+      if(e.target.id==='btn-clear-cart' || e.target.id==='btn-clear-all'){
+        if(confirm('Clear cart?')) clearCart();
+      }
+
+      // checkout
+      if(e.target.id==='btn-checkout'){
+        const totals = cartTotals();
+        if(totals.subtotal===0){ alert('Your cart is empty'); return; }
+        qs('#pay-amount').value = formatCurrency(totals.total);
+        showModal('checkout');
+      }
+
+      // close checkout
+      if(e.target.id==='btn-cancel-checkout'){
+        hideModal('checkout');
+      }
+
+      // login/register toggle
+      if(e.target.id==='btn-login'){
+        openAuth('login');
+      }
+      if(e.target.id==='btn-register'){
+        openAuth('register');
+      }
+      if(e.target.id==='auth-close'){
+        hideModal('auth');
+      }
+
+      // auth toggle
+      if(e.target.id==='auth-toggle'){
+        toggleAuth();
+      }
+
+      // navigation links (anchor clicks)
+      if(e.target.matches('a[data-link]')){
+        e.preventDefault();
+        const href = e.target.getAttribute('href').slice(1);
+        showSection(href);
+      }
+    });
+
+    // quantity change in cart (event delegation)
+    qs('#cart-list').addEventListener('change', (e)=>{
+      if(e.target.classList.contains('qty')){
+        const id = parseInt(e.target.getAttribute('data-id'));
+        const qty = parseInt(e.target.value)||1;
+        updateQuantity(id,qty);
+      }
+    });
+
+    // checkout form submit (simple validation)
+    qs('#checkout-form').addEventListener('submit',(ev)=>{
+      ev.preventDefault();
+      const name = qs('#ship-name').value.trim();
+      const addr = qs('#ship-address').value.trim();
+      if(!name || !addr){ alert('Please enter shipping name & address'); return; }
+      // simulate payment success
+      alert('Payment confirmed! Thank you, '+name+'.');
+      clearCart(); hideModal('checkout'); showSection('home');
+    });
+
+    // auth form submit (very simple simulation)
+    qs('#auth-form').addEventListener('submit',(ev)=>{
+      ev.preventDefault();
+      const mode = qs('#register-fields').classList.contains('hidden') ? 'login' : 'register';
+      if(mode==='login'){
+        const em = qs('#login-username').value.trim();
+        const pw = qs('#login-password').value.trim();
+        if(!em || !pw){ qs('#auth-msg').textContent='Please enter email & password'; return; }
+        qs('#auth-msg').textContent='Logged in (demo) as '+em;
+        hideModal('auth');
+      } else {
+        // simple validation for registration
+        const email = qs('#reg-email').value.trim();
+        const pass = qs('#reg-password').value.trim();
+        if(!email || !pass){ qs('#auth-msg').textContent='Please enter email & password for registration'; return; }
+        qs('#auth-msg').textContent='Registered (demo) as '+email;
+        hideModal('auth');
+      }
+    });
+
+    // close buttons for cart page
+    qs('#btn-close-cart').addEventListener('click',()=>showSection('home'));
+
+    // open/close modals utility
+    function showModal(name){
+      if(name==='checkout') qs('#checkout-modal').classList.remove('hidden');
+      if(name==='auth') qs('#auth-modal').classList.remove('hidden');
+    }
+    function hideModal(name){
+      if(name==='checkout') qs('#checkout-modal').classList.add('hidden');
+      if(name==='auth') qs('#auth-modal').classList.add('hidden');
+    }
+
+    // auth modal helpers
+    function openAuth(mode='login'){
+      qs('#auth-modal').classList.remove('hidden');
+      if(mode==='login'){
+        qs('#auth-title').textContent='Login';
+        qs('#login-fields').classList.remove('hidden');
+        qs('#register-fields').classList.add('hidden');
+        qs('#auth-toggle').textContent='Switch to Register';
+      } else {
+        qs('#auth-title').textContent='Register';
+        qs('#login-fields').classList.add('hidden');
+        qs('#register-fields').classList.remove('hidden');
+        qs('#auth-toggle').textContent='Switch to Login';
+      }
+    }
+    function toggleAuth(){
+      const isLogin = !qs('#login-fields').classList.contains('hidden');
+      openAuth(isLogin? 'register':'login');
+    }
+
+    // simple SPA navigation
+    function showSection(name){
+      const sections = {'home':qs('#home-section'),'products':qs('#products-section'),'about':qs('#about-section'),'cart':qs('#cart-section')};
+      for(const k in sections) sections[k].classList.add('hidden');
+      if(sections[name]) sections[name].classList.remove('hidden');
+      if(name==='products') window.scrollTo({top:0,behavior:'smooth'});
+    }
+
+    // On page load (render and init)
+    (function init(){
+      renderProducts();
+      updateCartUI();
+      showSection('home');
+    })();
+
+  </script>
+</body>
+</html>
+
